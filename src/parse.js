@@ -130,7 +130,7 @@ function commentHandler(pos){
 /* 多行注释解析器 */
 function multilineCommentHandler(pos){
   for (var j = pos + 1; j < symbolCount; j++) {
-    if (symbols[j] == '*' && j < symbolCount - 1 && symbols[j+1] == '#'){
+    if (symbols[j] == '*' && j < symbolCount - 1 && symbols[j+1] == '#' && words[j] == ''){
       return j + 1; // 返回主循环位置
     }
   }
