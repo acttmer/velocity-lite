@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script src="https://cdn.bootcss.com/es5-shim/4.5.9/es5-sham.min.js"></script>
+    <script src="https://cdn.bootcss.com/es5-shim/4.5.9/es5-shim.min.js"></script>
+    <script type="text/javascript" src="velocity-lite.0.1.2.js"></script>
+</head>
+<body>
+    <div id="result"></div>
+    <style>
+      .c {
+        background: #000;
+        color: #fff;
+      }
+    </style>
+
+    <script id="tpl" type="text/template">
+        <div>注释转义测试</div>
+        <div> \#\# This is not a comment</div><br>
+
+        <div>获得数组长度测试</div>
+
+        <div>获得数组长度测试</div>
+        #set ($arr = [1,2,3,4,5,6])
+        <div>arr = [1,2,3,4,5,6] Size = $arr.size()</div><br>
+        <div>字符串里使用变量测试</div>
+        #set ($s = {})
+        #set ($s.a = "Hello")
+        <div>$s.a < </div>
+        #if ("${a.hello($a.get())} <" == "$s.a World <")
+            <div>成功</div><br>
+        #end
+
+        <div>方法调用含字符串测试</div>
+        <div> $a.hello("Hello ((())) ))) World ${hl} ${a.hello($a.get())}")</div><br>
+
+        <div>不加{}方法调用测试</div>
+        <div> $a.hello($a.get())</div><br>
+
+        <div>加{}方法调用测试</div>
+        <div> ${a.hello($a.get())}</div><br>
+
+        <div>不加{}变量测试</div>
+        <div> $hl </div><br>
+
+        <div>加{}变量测试</div>
+        <div> ${hl}</div><br>
+
+        <div>安静引用测试</div>
+        <div> $!hl</div><br>
+
+        <div>加{}安静引用测试</div>
+        <div> $!{hl}</div><br>
+
+        <div>}}} {{{ }}}</div>
+        
+        <div>$test.hello()</div>
+        <div>$hello</div>
+        <div>$not_found</div>
+
+        
+        <ul>
+            #foreach ($val in $list)
+                <li>用户: ${val.user}/ 网站：${val.site} $foreach.index</li>
+            #end
+        </ul>
+
+    </script>
+    <script>
+        Velocity.register('test', {
+            hello: function(){
+                return 'HELLO TEST!!!';
+            }
+        });
+        var v = new Velocity(document.querySelector('#tpl').innerHTML);
+        var html = v.render({
+            this_is_a_var: 'YEAH!',
+            a:{
+                hello: function(content){
+                    return content;
+                },
+                get: function(){
+                    return 'Hello World';
+                }
+            },
+            hl: '成功',
+            list: [
+                {
+                    user: "A",
+                    site: "www.iqiyi.com"
+                },
+                {
+                    user: "B",
+                    site: "www.iqiyi.com"
+                }
+            ]
+        });
+        document.getElementById("result").innerHTML = html;
+    </script>
+</body>
+</html>

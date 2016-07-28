@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script type="text/javascript" src="assets/velocity-lite.0.1.2.js"></script>
+    <script type="text/javascript" src="dist/data.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://static.iqiyi.com/css/20160531/h5-paopao.css">
+</head>
+<body>
+    <div id="paopao"></div>
+    <script id="tpl" type="text/tmplate">
+          ##aaaa
+        <div>111111111</div>
+        <div>111111111</div>
+        <div>111111111</div>
+    </script>
+    <script>
+        Velocity.setConfig({isCache: true,cacheMax:10});
+    var v = new Velocity(document.querySelector('#tpl').innerHTML);
+    html = v.render({});
+    document.getElementById("paopao").innerHTML = html;
+
+
+    </script>
+</body>
+</html>

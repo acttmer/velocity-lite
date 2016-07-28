@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script type="text/javascript" src="../lib/velocity-lite.0.0.1.js"></script>
+</head>
+<body>
+    <script id="tpl" type="text/tmplate">
+        <div>
+            <section>
+                <div>
+                    $!{card.cardTitle}
+                </div>
+                <div>
+                    <ul>
+                        #foreach($circle in $card.circles)
+                        <li>
+                            <a href="javascript:;">
+                                <img src="$!{circle.icon}">
+                                <h2>$!{circle.name}</h2>
+                                #if($circle.wallType == 0)
+                                <i>明星</i>
+                                #else
+                                <i>话题</i>
+                                #end
+                            </a>
+                        </li>
+                        #end
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </script>
+    <script>
+    var v = new Velocity(document.querySelector('#tpl').innerHTML);
+
+
+
+    //if语句
+
+    var tpl = "<div>#if($isTrue)deom1 #elseif($data.age ==15)deom2#end</div>";
+    v = new Velocity(tpl);
+    html = v.render({
+        isTrue: false,
+        data: {
+            age: 15
+        }
+    });
+    console.log(html);
+
+    </script>
+</body>
+</html>

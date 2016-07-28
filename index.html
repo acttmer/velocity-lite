@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<script src="./dist/build.js"></script>
+<script type="text/javascript">
+    var tpl = '#foreach($item in $items)#if($item.isTrue)<div>hello ${item.name}</div>#end#end';
+    var v = new Velocity(tpl);
+    var json = {
+        items: [{
+            isTrue: true,
+            name: "messi"
+        }, {
+            name: "kaka"
+        }]
+    };
+    var html = v.render(json);
+    console.log(html);
+
+    
+</script>
+
+</html>

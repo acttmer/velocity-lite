@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script type="text/javascript" src="./velocity-20160607.js"></script>
+</head>
+
+<body>
+    <script id="tmpl" type="text/tmplate">
+        <div class="class1 #if($bool)class2#end">
+            #if($bool)class3#end
+        </div>
+    </script>
+    <script>
+    var v = new Velocity(document.querySelector('#tmpl').innerHTML);
+    var json = {
+        bool : true
+    };
+    var html = v.render(json);
+    console.log(html);
+    </script>
+    <div class="m-box m-box-mid" id="paopao">
+    </div>
+</body>
+
+</html>

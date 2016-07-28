@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script type="text/javascript" src="assets/velocity-lite.0.1.2.js"></script>
+</head>
+
+<body>
+    <script id="tmpl" type="text/tmplate">
+     <div>
+       #foreach($item in $classA)<div>$item $foreach.index $foreach.count</div>#end
+     </div>
+    </script>
+    <script>
+    var v = new Velocity(document.querySelector('#tmpl').innerHTML);
+    var data = { classA : ['c1','c2'] }
+    var html = v.render(data);
+    console.log(html);
+    </script>
+</body>
+
+</html>

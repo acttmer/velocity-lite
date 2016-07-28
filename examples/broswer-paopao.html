@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script type="text/javascript" src="../dist/build.js"></script>
+    <script type="text/javascript" src="../dist/data.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://static.iqiyi.com/css/20160531/h5-paopao.css">
+</head>
+
+<body>
+<div id="div"></div>
+    <script id="tpl" type="text/tmplate">
+      
+            #if($!{circle.shortDescription} !== $!{circle.description})
+            <a href="javascript:;" class="c-intr-more" data-node="more">
+              <i class="c-glyphicon c-glyphicon-arrowUp"></i>
+            </a>
+            #end
+    </script>
+    <script>
+        var v = new Velocity(document.getElementById("tpl").innerHTML);
+        var html = v.render(data.data);
+        document.getElementById("div").innerHTML = html;
+        console.log(html);
+    </script>
+</body>
+</html>

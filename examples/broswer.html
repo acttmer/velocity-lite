@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script type="text/javascript" src="/seajs/sea.js"></script>
+</head>
+<body>
+
+<script id="tmpl" type="text/tmplate">
+
+    \#foreach($item in $items)
+        $item.a
+    \#end
+    \#if(true)
+    \#end
+    
+    #[[
+        #foreach($item in $items)
+        $item.a
+        #end
+        #if(true)
+        #end
+    ]]#
+
+</script>
+<script>
+seajs.config({
+    alias: {
+        'velocityjs': '/velocityjs/0.4.10/index'
+    }
+});
+    
+seajs.use('velocityjs',function(Velocity){
+    var Parser=Velocity.Parser;
+    var Compile=Velocity.Compile;
+
+    var asts=Parser.parse(document.querySelector('#tmpl').innerHTML);
+    var data = {
+       items: [{a:'1'},{a:2}]
+    };
+    var s = (new Compile(asts)).render(data);
+    console.log(s);
+});
+</script>
+</body>
+</html>
