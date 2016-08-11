@@ -1,6 +1,6 @@
 # Velocity Lite 使用手册
 
-### 0.1.2 正式版
+### 0.2.5 Stable
 
 ---
 
@@ -87,17 +87,26 @@
 
 ### 转义、字符串与注释
 
-* 转义单个字符
+* 转义指令和变量
 
 ```
-    <script>I am a \#developer</script>
-    <script>I love \$dollar</script>
+    <script>I said \#if</script>
+    <script>I said \#not_a_directive</script>
+    <script>
+        #set($dollar = "sleep")
+        I love \$dollar
+    </script>
+    <script>
+        I love \\$unknown
+    </script>
 ```
     
 > **输出结果**
 > 
-> I am a #developer
+> I said #if
+> I said \#not_a_directive
 > I love $dollar
+> I love \\$unknown
 
 * 不解析某一区块
 
@@ -118,13 +127,15 @@
 
     * 在字符串内，仅需要对 $ 和 引号做转义处理
 
+    * 字符串内规则遵循 js 字符串规则，显示 \ 需要 \\
+
 ```
-    <script>My name is $me.getMynameByUsername("Ilove\$\"")</script>
+    <script>My name is $me.getMynameByUsername("Ilove\$\"\\")</script>
 ```
 
 > **输出结果**
 > 
-> 'My name is' + me.getMynameByUsername('Ilove$"')
+> 'My name is' + me.getMynameByUsername('Ilove$"\')
 
 * 单行注释
 
@@ -227,8 +238,10 @@
         undefinedOutput: false, // 变量不存在时是否输出 $ + 原字符
         sessionCache: false, // 是否使用 sessionStorage 作为缓存技术
         
-        exactErrorLine: false 
+        exactErrorLine: false,
         // 在引入了 Jquery 或 Zepto 的前提下，是否开启准确错误行定位 (可定位在HTML文件里的位置)
+
+        arraySize: true // 是否注入一个 Array.prototype.size() 方法
     });
 ```
 
@@ -348,6 +361,8 @@ Velocity Lite 使用一个自制的语法树结构来完成整个解析编译步
 
 * npm run build  --- 生成压缩后的js
 
-* npm run buildDev  --- 生成完整js
+* npm run build-dev  --- 生成完整js
+
+* npm run build-es3  --- 生成es3兼容版本js
 
 * npm run test  --- 单元测试

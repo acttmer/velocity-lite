@@ -17,11 +17,11 @@ function setRamCache(key, fn) {
 }
 
 function getSessionCache(key) {
-  return sessionStorage ? sessionStorage.getItem(key) : null;
+  return window.sessionStorage ? sessionStorage.getItem(key) : null;
 }
 
 function setSessionCache(key, js) {
-  if (sessionStorage) {
+  if (window.sessionStorage) {
     sessionStorage.setItem(key, js);
   }
 }

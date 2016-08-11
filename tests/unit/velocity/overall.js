@@ -1,15 +1,15 @@
 import Velocity from '../../../src/main';
-console.log(Velocity);
+Velocity.config({
+  undefinedOutput: true
+})
 
 describe('test if', function(){
   it('单条if true语句', function() {
     var tpl = '#if($item)<div>1</div>#end',
       data = { item: true },
       result = '<div>1</div>';
-    
-    console.log(Velocity);
+
     var v = new Velocity(tpl);
-    console.log(v);
     var html = v.render(data);
     expect(html).toBe(result);
   });
@@ -62,6 +62,14 @@ describe('test if', function(){
     expect(html).toBe(result);
   });
 
+  it('if 表达式 != 语句', function() {
+    var tpl = '#if(100!=1)<div>OK</div>#end',
+      result = '<div>OK</div>';
+    var v = new Velocity(tpl);
+    var html = v.render({});
+    expect(html).toBe(result);
+  });
+
   it('if (true) else 语句', function() {
     var tpl = '#if($bool)<div>0</div>#else<div>1</div>#end',
       data = { bool: true},
@@ -96,7 +104,25 @@ describe('test if', function(){
     var v = new Velocity(tpl);
     var html = v.render(data);
     expect(html).toBe(result);
-  }); 
+  });
+
+  it('并列条件', function() {
+    var tpl = '#set($a = 2)#if($!{a} == 2 || $!{a} == 3 || $!{a} == 1)OK#end',
+      data = { bool: true},
+      result = 'OK';
+    var v = new Velocity(tpl);
+    var html = v.render(data);
+    expect(html).toBe(result);
+  });
+
+  it('和条件', function() {
+    var tpl = '#set($a = 2)#if($!{a} > 1 && $!{a} < 3)OK#end',
+      data = { bool: true},
+      result = 'OK';
+    var v = new Velocity(tpl);
+    var html = v.render(data);
+    expect(html).toBe(result);
+  });
 
   it('is elseif语句', function(){
     var tpl = '#if($num == 1)<div>1</div>#elseif($num == 2)<div>2</div>#else<div>3</div>#end',
@@ -231,6 +257,27 @@ describe('test specialSymbols', function(){
     expect(r).toBe('<div>a$1</div>');
   });
 
+  it('变量加{}', function() {
+    var setTpl = '#set($word = "Yes")' + '<div>我说${word}oh</div>';
+    var v = new Velocity(setTpl);
+    var r = v.render({});
+    expect(r).toBe('<div>我说Yesoh</div>');
+  });
+
+  it('变量与中文混合', function() {
+    var setTpl = '#set($word = "Yes")' + '<div>我说$word你说No</div>';
+    var v = new Velocity(setTpl);
+    var r = v.render({});
+    expect(r).toBe('<div>我说Yes你说No</div>');
+  });
+
+  it('变量与中文混合 2', function() {
+    var setTpl = '#set($word = "Yes")' + '<div>我说${word}你说{No}</div>';
+    var v = new Velocity(setTpl);
+    var r = v.render({});
+    expect(r).toBe('<div>我说Yes你说{No}</div>');
+  });
+
   it('字符串中出现 < 和 空格', function() {
     var tpl = '#set(${a} = \'1 < 10\')<div>${a}</div>';
     var v = new Velocity(tpl);
@@ -240,12 +287,49 @@ describe('test specialSymbols', function(){
     });
     expect(r).toBe('<div>1 < 10</div>');
   });
+
   it('##-----------', function() {
     var setTpl = '#set($item = ["a","b"])<div>\\#\\#</div>';
     var v = new Velocity(setTpl);
     var r = v.render({});
-    expect(r).toBe('<div>##</div>');
+    expect(r).toBe('<div>\\#\\#</div>');
   });
+
+  it('\\#if', function() {
+    var setTpl = '<div>\\#if</div>';
+    var v = new Velocity(setTpl);
+    var r = v.render({});
+    expect(r).toBe('<div>#if</div>');
+  });
+
+  it('\\\\\#if', function() {
+    var setTpl = '<div>\\\\\\#if</div>';
+    var v = new Velocity(setTpl);
+    var r = v.render({});
+    expect(r).toBe('<div>\\#if</div>');
+  });
+
+  it('\\\\$variable', function() {
+    var setTpl = '<div>\\\\$variable</div>';
+    var v = new Velocity(setTpl);
+    var r = v.render({});
+    expect(r).toBe('<div>\\$variable</div>');
+  });
+
+  it('\\\\\\$variable', function() {
+    var setTpl = '<div>\\\\\\$variable</div>';
+    var v = new Velocity(setTpl);
+    var r = v.render({});
+    expect(r).toBe('<div>\\$variable</div>');
+  });
+
+  it('$$variable', function() {
+    var setTpl = '<div>$$variable</div>';
+    var v = new Velocity(setTpl);
+    var r = v.render({});
+    expect(r).toBe('<div>$$variable</div>');
+  });
+
   it('#if-----------', function() {
     var setTpl = '<div>"\\#if"</div>';
     var v = new Velocity(setTpl);

@@ -6,13 +6,12 @@ export default compile;
 /* 正则表达式预编译 */
 const regEscapeQuote = /\'/g, // 单引号
   regEscapeSlash = /\\/g, // 斜线
-  regNotW = /[^\w]/, // 特殊符号
-  reg0to9 = /[0-9]/, // 0 - 9
+  regNotW = /[^\w]/g, // 特殊符号
   regReplaceString = /'(.*)'/g, // 替换字符串为空
   regReplaceBracket = /\((.*)\)/g, // 替换括号内内容为空
   regForeachExp = /\s+in\s+/g, // foreach 表达式
-  regSetExp1 = /(.*)[\w\s\]]=[^=]*[\w\s\[\{](.*)/, // set 表达式 1
-  regSetExp2 = /(.*)[\w\s\]]=$/; // set 表达式 2
+  regSetExp1 = /(.*)[\w\s\]]=[^=]*[\w\s\[\{](.*)/g, // set 表达式 1
+  regSetExp2 = /(.*)[\w\s\]]=$/g; // set 表达式 2
 
 
 const TYPE_HTML = 1, // HTML 类型
@@ -49,15 +48,21 @@ function compile(set) {
   words = set.words;
 
   // Js Header
-  var jsCode = 'if(!Array.prototype.size){Array.prototype.size=function(){return this.length;};}var $data=arguments[0],$out=\'\';';
+  var jsCode = '\'use strict\';';
+
+  // 是否注入 Array.prototype.size 方法
+  if (configs.arraySize) {
+    jsCode += 'if(!Array.prototype.size){Array.prototype.size=function(){return this.length;};}';
+  }
+
+  jsCode += 'var $data=arguments[0],$out=\'\';';
 
   // 编译主要代码部分
   var inner = recurseMake(parseStack, 0);
 
   // 处理 if foreach 和 end 不配对的情况
   if (procedureControlStack.length > 0) {
-    error.syntax('有 if 或 foreach 但缺少配对 end', 'EOF');
-    throw ': The program is stopped due to syntax error';
+    throwError('有 if 或 foreach 但缺少配对 end', 'EOF');
   }
 
   // 预编译变量
@@ -76,46 +81,39 @@ function recurseMake(parseStack, layer) {
   var jsCode = '';
   var mergedHtml = '';
 
-  var segment; // 变量声明
+  var segment, currentNode, lastNode, nextNode; // 变量声明
 
-  for (var i = 0; i < parseStack.length; i++) {
-    if (parseStack[i].val && parseStack[i].val == '') continue;
+  for (var i = 0, length = parseStack.length; i < length; i++) {
 
-    if (parseStack[i].type == TYPE_HTML) {
-      mergedHtml += parseStack[i].val;
+    // 预定义节点, 优化体积
+    currentNode = parseStack[i];
+    lastNode = i > 0 ? parseStack[i - 1] : false;
+    nextNode = i < length - 1 ? parseStack[i + 1] : false;
+
+    if (currentNode.val && currentNode.val == '') continue;
+
+    if (currentNode.type == TYPE_HTML) {
+      mergedHtml += currentNode.val;
 
       /* 预合并html部分提高性能 */
-      if (i == parseStack.length - 1 || (i < parseStack.length - 1 && parseStack[i+1].type != TYPE_HTML)) {
+      if (i == length - 1 || (nextNode && nextNode.type != TYPE_HTML)) {
         var escaped = escapeSQ(mergedHtml);
         if (escaped == '') continue;
         jsCode += `$out+='${escaped}';`;
         mergedHtml = '';
       }
 
-    } else if (parseStack[i].type == TYPE_VARIABLE || parseStack[i].type == TYPE_VARIABLE_QR) {
+    } else if (currentNode.type == TYPE_VARIABLE || currentNode.type == TYPE_VARIABLE_QR) {
       // 只有当变量在第一层的时候才是输出
       if (layer == 0) {
         jsCode += '$out+=';
       }
 
       // 是不是安静引用
-      var isQr = parseStack[i].type == TYPE_VARIABLE_QR ? true : false;
+      var isQr = currentNode.type == TYPE_VARIABLE_QR ? true : false;
 
       // 递归生成的片段
-      segment = recurseMake(parseStack[i].sublayer, layer + 1);
-
-      // 一些变量特例，比如 $ 后紧跟数字或者单纯的 $
-      if (segment == '' || reg0to9.test(segment[0])){
-
-        if (isQr) {
-          jsCode += `'$!${segment}'`;
-        } else {
-          jsCode += `'$${segment}'`;
-        }
-
-        if (layer == 0) jsCode += ';';
-        continue;
-      }
+      segment = recurseMake(currentNode.sublayer, layer + 1);
 
       // 将搜索到的变量压入数组
       var name = segment.split(regNotW)[0];
@@ -128,8 +126,8 @@ function recurseMake(parseStack, layer) {
         // 使用 try catch 实现 Quiet Reference
         jsCode += `(function(){try{return((${segment}||${segment}==0)?${segment}:'')}catch(e){return '';}})()`;
 
-      } else if (configs.undefinedOutput && (i == 0 || parseStack[i - 1].type == TYPE_HTML)) {
-        // 如果开启了 "变量不存在则原样输出" 这个选项，并且该变量在HTML内，则对其进行处理
+      } else if (configs.undefinedOutput && (i == 0 || lastNode.type == TYPE_HTML)) {
+        // 如果该变量在HTML内，则对其进行处理
 
         // 此处思路为使用 try catch 来进行变量是否存在的判断，然后返回对应值或 $ + 原字符
         var undefinedOutput = '$' + escapeSQ(segment);
@@ -144,22 +142,21 @@ function recurseMake(parseStack, layer) {
         jsCode += ';';
       }
 
-    } else if (parseStack[i].type == TYPE_DIRECTIVE) {
+    } else if (currentNode.type == TYPE_DIRECTIVE) {
       // 调用指令处理器处理
-      segment = processorHandlers[parseStack[i].val](parseStack[i].sublayer ? recurseMake(parseStack[i].sublayer) : null);
+      segment = processorHandlers[currentNode.val](currentNode.sublayer ? recurseMake(currentNode.sublayer) : null);
 
       // 语法检查报错处理
       if (segment.error) {
-        error.syntax(segment.error, error.getLine(symbols, words, parseStack[i].begin));
-        throw ': The program is stopped due to syntax error';
+        throwError(segment.error, error.getLine(symbols, words, currentNode.begin));
       }
 
       jsCode += segment;
 
-    } else if (parseStack[i].type == TYPE_SYNTAX) {
-      jsCode += parseStack[i].val;
+    } else if (currentNode.type == TYPE_SYNTAX) {
+      jsCode += currentNode.val;
 
-    } else if (parseStack[i].type == TYPE_STRING_CONTENT) {
+    } else if (currentNode.type == TYPE_STRING_CONTENT) {
       /* 对于字符串部分多做判断主要是为了更好的执行性能做优化 */
 
       // 如果字符串是第一个，则加入起始标识 '
@@ -168,30 +165,26 @@ function recurseMake(parseStack, layer) {
       }
 
       // 如果字符串不在整个模型的第一个且上一个不是字符串，要在前面加上 +'
-      if (i > 0 && parseStack[i - 1].type != TYPE_STRING_CONTENT) {
+      if (lastNode && lastNode.type != TYPE_STRING_CONTENT) {
         jsCode += '+\'';
       }
 
-      jsCode += parseStack[i].val; // 插入值
+      jsCode += currentNode.val; // 插入值
 
       // 如果字符串不是最后一个且下一个元素不是字符串，则加入 + (可推测下一个是方法或变量)
-      if (i < parseStack.length - 1 && parseStack[i + 1].type !== TYPE_STRING_CONTENT) {
+      if (nextNode && nextNode.type !== TYPE_STRING_CONTENT) {
         jsCode += '\'+';
       }
 
       // 如果字符串是最后一个，则加入结束标识 '
-      if (i == parseStack.length - 1) {
+      if (i == length - 1) {
         jsCode += '\'';
       }
 
-    } else if (parseStack[i].type == TYPE_STRING) {
-      jsCode += recurseMake(parseStack[i].sublayer, layer + 1);
-
+    } else if (currentNode.type == TYPE_STRING) {
+      jsCode += recurseMake(currentNode.sublayer, layer + 1);
     }
 
-    /* else if (parseStack[i].type == 'code') {
-      jsCode += parseStack[i].val;
-    }*/
   }
 
   return jsCode;
@@ -209,7 +202,7 @@ function escapeSQ(str){
 function ifProcessor(expression){
   // 检查语法
   var check = expression.replace(regReplaceString, '');
-  if (check.match(regSetExp1)) {
+  if (check.search(regSetExp1) >= 0) {
     return {
       error: '不应在 if 表达式里进行赋值操作'
     };
@@ -231,7 +224,7 @@ function elseifProcessor(expression){
 
   // 检查语法
   var check = expression.replace(regReplaceString, '');
-  if (check.match(regSetExp1)) {
+  if (check.search(regSetExp1) >= 0) {
     return {
       error: '不应在 elseif 表达式里进行赋值操作'
     };
@@ -283,7 +276,7 @@ function setProcessor(expression){
 }
 
 function breakProcessor(){
-  return 'break;';
+  return 'return $out;';
 }
 
 function foreachProcessor(expression){
@@ -303,10 +296,30 @@ function foreachProcessor(expression){
 
   // 此处添加了函数块变量域支持
   return '(function(){'
-     + `var foreach={},${key};`
-     + `for(var $index=0,$length=${arr}.length;$index<$length;$index++){`
-      + 'foreach.count=$index+1;'
-      + 'foreach.index=$index;'
-      + 'foreach.hasNext=($index<$length-1?true:false);'
-      + `${key}=${arr}[$index];`;
+     + `if(${arr} instanceof Array) {`
+       + `var foreach={},${key};`
+       + `for(var $i=0,$len=${arr}.length;$i<$len;$i++){`
+         + 'foreach.count=$i+1;'
+         + 'foreach.index=$i;'
+         + 'foreach.hasNext=($i<$len-1?true:false);'
+         + `${key}=${arr}[$i];`
+         + 'if($callback()!==undefined) return $out;'
+       + '}'
+     + '} else {'
+       + `var foreach={count:0,index:-1},${key},$len=Object.getOwnPropertyNames(${arr}).length;`
+       + `for(var $k in ${arr}){`
+         + 'foreach.count++;'
+         + 'foreach.index++;'
+         + 'foreach.hasNext=(foreach.index<$len-1?true:false);'
+         + `${key}=${arr}[$k];`
+         + 'if($callback()!==undefined) return $out;'
+       + '}'
+     + '}'
+     + `function $callback(){`;
+}
+
+
+function throwError(message, line){
+  error.syntax(message, line);
+  throw ': The program is stopped due to syntax error';
 }

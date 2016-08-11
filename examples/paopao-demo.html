@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script type="text/javascript" src="assets/velocity-lite.0.2.5.js"></script>
+    <script type="text/javascript" src="dist/data.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://static.iqiyi.com/css/20160531/h5-paopao.css">
+</head>
+<body>
+    <div id="paopao"></div>
+    <script id="tpl" type="text/tmplate">
+        #foreach($item in $data.feeds)
+            <div data-component = "page.component.feedCard"
+                class="m-box m-box-mid"
+                data-sourceType="$!{item.sourceType}"
+                data-pageType="feedList"
+                data-wallId="$!{item.wallId}"
+                data-wallName="$!{item.wallName}"
+                data-t="505201_12"
+                data-feedId="$!{item.feedId}"
+                data-wallType="$!{item.wallType}"
+                data-sourceType="$!{item.sourceType}"
+                data-wallIcon="$!{circle.icon}"
+                #if($item.sourceType==8)
+                    data-tvTitle="$!{item.tvTitle}"
+                    data-extendType="$!{item.extendType}"
+                #end
+                >
+                <div class="m-box-items" data-attr="detail">
+                    <div class="m-pp-user">
+                        <a href="javascript:void(0);" class="c-user-img" style="background-image:url($!{item.icon})"> </a>
+                        <div class="m-feed-name" data-attr="detail">
+                            <a href="javascript:void(0);" class="c-user-name">$!{item.name}</a>
+                            <span class="c-user-time" data-attr="detail">$!{item.pubStr}</span>
+                        </div>
+                        <a href="javascript:void(0);" class="m-pp-more" data-wallId="$!{item.wallId}" data-feedId="$!{item.feedId}" data-uid="$!{item.uid}"  data-node="reportBtn"><i class="c-glyphicon c-pp-more"></i></a>
+                    </div>
+                </div>
+                <!--文字描述-->
+                <div class="m-box-items">
+                    #if($item.sourceType == 1)
+                        #set($picCount = $item.picList.length)
+                        #if($picCount==0)
+                            #set($var_class_outer="m-pp-widelist")
+                        #elseif($picCount == 1)
+                            #set($singlePic = $item.picList[0])
+                            #if($singlePic.isLongPic)
+                                #set($var_class_outer="m-pp-longlist")
+                                #set($var_class_inner="m-long-piclist")
+                            #elseif($singlePic.isBigPic)
+                                #set($var_class_outer="m-pp-biglist")
+                                #set($var_class_inner="m-big-piclist")
+                            #else
+                                #set($var_class_outer="m-pp-widelist")
+                                #set($var_class_inner="m-wide-piclist")
+                            #end
+                        #elseif($picCount>1)
+                            #set($var_class_outer="m-pp-threelist")
+                            #set($var_class_inner="m-three-piclist")
+                        #end
+                        <div class="${var_class_outer}">
+                            <p class="m-pp-txt" data-node="detail">
+                                #if($item.isGood)
+                                    <i class="c-pp-imgicon c-pp-good"></i>
+                                #elseif($item.isNew)
+                                    <i class="c-pp-imgicon c-pp-new"></i>
+                                #end
+                                <span data-attr="descInfo">$!{item.description}</span>
+                            </p>
+                            #if($item.picList.length>1)
+                            ##多图
+                            <ul class="${var_class_inner}" data-node="detail">
+                                #foreach($picInfo in $item.picList)
+                                <li class="m-pic" data-node="picture_$!{picInfo.index}">
+                                    <div class="piclist-img">
+                                        <a href="javascript:void(0);" data-index="$!{picInfo.index}" class="c-pic-link" style="background-image:url($!{picInfo.listPage})">
+                                            #if($picInfo.isGif)
+                                                <div class="c-pp-rb">
+                                                    <i class="c-pp-picicon blue">GIF</i>
+                                                </div>
+                                            #elseif($!picInfo.isLongPic)
+                                                <div class="c-pp-rb">
+                                                    <i class="c-pp-picicon blue">长图</i>
+                                                </div>
+                                            #end
+                                        </a>
+                                    </div>
+                                </li>
+                                #end
+                                <div class="c-pp-rt">
+                                    <i class="c-pp-picicon black">共$!{item.picNum}张</i>
+                                </div>
+                            </ul>
+                            #elseif($item.picList.length == 1)
+                            ##单图
+                            #set($picInfo = $item.picList[0])
+                            <ul class="${var_class_inner}" data-node="detail">
+                                <li class="m-pic" data-node="picture_$!{picInfo.index}">
+                                    <div class="piclist-img">
+                                        <a href="javascript:void(0);" data-index="$!{picInfo.index}" class="c-pic-link" style="background-image:url(${picInfo.listPage})">
+                                            #if($picInfo.isLongPic)
+                                                <div class="c-pp-rb">
+                                                    <i class="c-pp-picicon blue">长图</i>
+                                                </div>
+                                            #elseif($picInfo.isBigPic)
+                                                <div class="c-pp-rb">
+                                                    <i class="c-pp-picicon blue">GIF</i>
+                                                </div>
+                                            #end
+                                        </a>
+                                    </div>
+                                </li>
+                            </ul>
+                            #end
+                        </div>
+                    #elseif($item.sourceType == 8)
+                        #if($item.extendType == 6)
+                            #set($var_class_outer="m-pp-longvideo")
+                            #set($var_class_inner="m-long-video")
+                        #elseif($item.extendType == 8)
+                            #set($var_class_outer="m-pp-bigvideo")
+                            #set($var_class_inner="m-big-video")
+                        #end
+                        <div class="${var_class_outer}">
+                            <p class="c-videolist-title" data-node="detail" data-attr="descInfo">
+                                $!{item.description}
+                            </p>
+                            <ul class="${var_class_inner}" data-node="detail">
+                                <li class="m-video" data-node="video">
+                                    <div class="videolist-img">
+                                        <a href="$!{item.videoPlayUrl}" class="c-video-link" style="background-image:url($!{item.thumbnail})">
+                                            <div class="c-pp-rb">
+                                                <i class="c-pp-picicon black">$!{item.duration}</i>
+                                            </div>
+                                            <div class="c-pp-center">
+                                                <i class="c-pp-playicon"></i>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    #elseif($item.sourceType == 4)
+                        <div class="m-pp-biglist">
+                            <ul class="m-big-piclist" data-node="detail">
+                                <li class="m-pic" data-node="picture_$!{item.index}">
+                                    <div class="piclist-img">
+                                        <a href="javascript:void(0);" data-index="$!{item.index}" class="c-pic-link" style="background-image:url($!{item.picList[0].listPage})">
+                                        </a>
+                                        <a href="javascript:;" class="m-pp-isay" data-index="$!{item.picList[0].index}">
+                                            <span class="c-isay-desc" data-index="$!{item.picList[0].index}" data-attr="descInfo">$!{item.description}</span>
+                                        </a>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    #end
+                <!--相关操作-->
+                    <div class="m-box-items m-box-items-full">
+                        <div class="m-pp-icons" data-attr="detail">
+                            <a href="javascript:void(0)" class="m-icon-link" data-node="share"> <i class="c-glyphicon c-pp-share"></i> <span class="c-icons-desc">分享</span></a>
+                            <a href="javascript:void(0)" class="m-icon-link" data-node="comment"> <i class="c-glyphicon c-pp-comment"></i> <span class="c-icons-desc">评论</span> <i class="c-icons-num" data-attr="commentCount">$!{item.commentCount}</i> </a>
+                            <a href="javascript:void(0)" class="m-icon-link #if($item.isAgree)ilike #end" data-wallId = "$!{item.wallId}" data-block = "505201_5_1" data-wallName="${item.wallName}" data-wallType="$!{item.wallType}" data-owner = "$!{item.uid}" data-sourceType="${item.sourceType}" data-feedId="$item.feedId" data-component="page.bubble.agree"> <i class="c-glyphicon c-pp-like"></i> <span class="c-icons-desc">点赞</span> <i class="c-icons-num" data-node="agreeCount">$!{item.agreeCount}</i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        #end
+    </script>
+    <script>
+    var v = new Velocity(document.querySelector('#tpl').innerHTML);
+    html = v.render(data);
+    document.getElementById("paopao").innerHTML = html;
+
+
+    </script>
+</body>
+</html>

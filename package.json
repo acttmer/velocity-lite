@@ -1,12 +1,13 @@
 {
   "name": "velocity-js-lite",
-  "version": "0.1.2",
-  "description": "'精简版 velocity'",
+  "version": "0.2.5",
+  "description": "精简高效率版本的 Velocity.js 模板引擎",
   "main": "index.js",
   "directories": {
     "example": "examples"
   },
   "devDependencies": {
+    "art-velocity": "git+ssh://git@gitlab.qiyi.domain:10022/html5/velocity-transfer-tools.git",
     "babel-core": "^6.10.4",
     "babel-loader": "^6.2.4",
     "babel-preset-es2015": "^6.9.0",
@@ -19,10 +20,14 @@
     "karma-webpack": "^1.7.0",
     "webpack-dev-server": "^1.14.1"
   },
+  "bin": {
+    "velocity-lite": "./bin/velocity-lite.js"
+  },
   "scripts": {
     "dev": "webpack-dev-server --content-base examples",
     "build": "webpack --type build",
-    "buildDev": "webpack --type dev",
+    "build-dev": "webpack --type dev",
+    "build-es3": "webpack --config webpack.es3.js && node es3_fix.js",
     "speed": "webpack --type speed -w",
     "test": "karma start karma.conf.js"
   },
@@ -31,5 +36,9 @@
     "url": "ssh://git@gitlab.qiyi.domain:10022/caozhonghong/velocity-js-lite.git"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^2.9.0",
+    "es3ify-loader": "^0.2.0"
+  }
 }

@@ -1,0 +1,261 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>template test</title>
+<script src="js/jquery-1.7.2.min.js"></script>
+<script src="js/highcharts.js"></script>
+
+
+<script src="js/arttemplate.js"></script>
+<script src="js/mustache.js"></script>
+<script src="js/juicer.js"></script>
+<script src="js/velocity-lite.0.2.5.min.js"></script>
+
+
+<script>
+// 数据量
+var length = 1000;
+// 渲染次数
+var number = 1000;
+
+var data = {
+    list: []
+};
+
+for (var i = 0; i < length; i ++) {
+    data.list.push({
+        index: i,
+        user: '<strong style="color:red">'+Math.random()+'</strong>',
+        site: 'http://www'+Math.random()+'.planeart.cn',
+        weibo: 'http://we'+Math.random()+'ibo.com/planeart',
+        QQweibo: 'http://t.qq.c'+Math.random()+'om/tangbin'
+    });
+};
+
+
+// 待测试的引擎列表
+var testList = [
+
+    {
+        name: 'juicer',
+        tester: function () {
+            juicer.set({
+                'errorhandling': true,
+                'cache': true
+            });
+            var source = document.getElementById('juicer').innerHTML;
+
+            for (var i = 0; i < number; i ++) {
+                var fn = juicer(source);
+                fn.render(data);
+            }
+        }
+    },
+    {
+          name: 'Velocity Lite 0.2.5',
+          tester: function () {
+              var source = document.getElementById('Velocity').innerHTML;
+
+              for (var i = 0; i < number; i ++) {
+                var v = new Velocity().getVM(source);
+                v(data);
+              }
+          }
+      },
+    {
+        name: 'artTemplate',
+        tester: function () {
+            template.config('escape', false);
+            var source = document.getElementById('template').innerHTML;
+
+            for (var i = 0; i < number; i ++) {
+                var fn = template.compile(source);
+                fn(data);
+            }
+        }
+    },
+    {
+        name: 'Mustache',
+        tester: function () {
+            var source = document.getElementById('Mustache').innerHTML;
+            for (var i = 0; i < number; i ++) {
+                Mustache.to_html(source, data);
+            }
+        }
+    }
+
+];
+
+
+var startTest = function () {
+
+    var Timer = function (){
+        this.startTime = + new Date;
+    };
+
+    Timer.prototype.stop = function(){
+        return + new Date - this.startTime;
+    };
+
+    var colors = Highcharts.getOptions().colors;
+    var categories = [];
+
+    for (var i = 0; i < testList.length; i ++) {
+        categories.push(testList[i].name);
+    }
+
+    var chart = new Highcharts.Chart({
+        chart: {
+            renderTo: 'container',
+            height: categories.length * 80,
+            type: 'bar'
+        },
+
+        title: {
+            text: 'JavaScript 模板引擎负荷测试'
+        },
+
+        subtitle: {
+            text: length + ' 条数据 × ' + number + ' 次渲染'
+        },
+
+        xAxis: {
+            categories: categories,
+            labels: {
+                align: 'right',
+                style: {
+                    fontSize: '12px',
+                    fontFamily: 'Verdana, sans-serif'
+                }
+            }
+        },
+
+        yAxis: {
+            min: 0,
+            title: {
+                text: '耗时(毫秒)'
+            }
+        },
+
+        legend: {
+            enabled: false
+        },
+
+        tooltip: {
+            formatter: function() {
+                return '<b>'+ this.x +'</b><br/>'+
+                    this.y + '毫秒';
+            }
+
+        },
+
+        credits: {
+            enabled: false
+        },
+        plotOptions: {
+            bar: {
+                dataLabels: {
+                    enabled: true,
+                    formatter: function () {
+                        return this.y + 'ms';
+                    }
+                }
+            }
+        },
+        series: [{
+            data : []
+        }]
+
+    });
+
+    var log = function (message) {
+        document.getElementById('log').innerHTML = message;
+    };
+
+    var tester = function (target) {
+
+
+        var time = new Timer;
+        target.tester();
+        var endTime = time.stop();
+
+        chart.series[0].addPoint({
+            color: colors.shift(),
+            y: endTime
+        });
+
+
+        if (!testList.length) {
+            log('测试已完成，请不要迷恋速度');
+            return;
+        }
+
+        target = testList.shift();
+
+        log('正在测试: ' + target.name + '..');
+
+        setTimeout(function () {
+            tester(target);
+        }, 500);
+
+    };
+
+    var target = testList.shift();
+    log('正在测试: ' + target.name + '..');
+    tester(target);
+
+};
+</script>
+
+
+
+
+
+<!-- artTemplate 的模板 -->
+<script id="template" type="text/tmpl">
+<ul>
+    {{each list as val}}
+        <li>用户: {{val.user}} / 网站：{{val.site}}</li>
+    {{/each}}
+</ul>
+</script>
+
+<!--juicer 的模板 -->
+<script id="juicer" type="text/tmpl">
+<ul>
+    {@each list as val}
+        <li>用户: $${val.user} / 网站：$${val.site}</li>
+    {@/each}
+</ul>
+</script>
+
+<!--Mustache 的模板 -->
+<script id="Mustache" type="text/tmpl">
+<ul>
+    {{#list}}
+        <li>用户: {{{user}}} / 网站：{{{site}}}</li>
+    {{/list}}
+</ul>
+</script>
+
+<!--Velocity 的模板 -->
+<script id="Velocity" type="text/tmpl">
+<ul>
+    #foreach($val in $list)
+        <li>用户: ${val.user}/ 网站：${val.site}</li>
+    #end
+</ul>
+</script>
+
+</script>
+</head>
+
+<body>
+<h1>引擎渲染速度测试</h1>
+<p><strong><script>document.write(length)</script></strong> 条数据 × <strong><script>document.write(number)</script></strong> 次渲染测试 [escape:false, cache:true]</p>
+<p><em>建议在拥有 v8 javascript 引擎的 chrome 浏览器上进行测试，避免浏览器停止响应</em></p>
+<p><button id="button-test" onclick="this.disabled=true;startTest()" style="padding: 5px;">开始测试&raquo;</button> <span id="log" style="font-size:12px"><script>for (var i = 0; i < testList.length; i ++) {document.write(testList[i].name + '; ')}</script></span></p>
+<div id="container" style="min-width: 400px; margin: 0 auto"></div>
+</body>
+</html>

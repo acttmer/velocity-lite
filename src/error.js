@@ -10,11 +10,9 @@ function syntax(notice, line){
 }
 
 function getLine(symbols, words, pos){
-  var lineNumber; // 最终行数
-
   var symbolString = symbols.slice(0, pos).join(''); // 截取整个模板字符串从开头到所在字符位置
   var lines = symbolString.split('\n');
-  lineNumber = lines.length;
+  var lineNumber = lines.length;
 
   if (lines[0].trim() == '' && lines.length !== 1) lineNumber--;
 

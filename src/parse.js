@@ -21,12 +21,14 @@ var words, // 词表
 
 var res; // 预先声明以缩减体积
 
+var testNumber = /\d/g; // 测试是不是是数字
+
 
 /* 解析器主循环 */
 function parse(template) {
 
-  words = template.split(/[^\w\u4E00-\u9FA5]/g), // 词表
-  symbols = template.replace(/[\w|\u4E00-\u9FA5]/g, '').split(''); // 符号表
+  words = template.split(/[^\w]/g), // 词表
+  symbols = template.match(/[^\w]/g); // 符号表
   symbolCount = symbols.length;
 
   var parseStack = [];
@@ -35,10 +37,11 @@ function parse(template) {
   parseStack.push({type: TYPE_HTML, val: words.shift()});
 
   for (var i = 0; i < symbolCount; i++) {
-    var hasNext = i < symbolCount - 1 ? true : false; // 是否存在下一项
+    var hasNext = i < symbolCount - 1 ? symbols[i + 1] : false; // 是否存在下一项
 
-    if (symbols[i] == '$') {
-      /* 如遇变量，调用递归变量解析器，根据返回结果进行操作 */
+    if (symbols[i] == '$' && !testNumber.test(words[i]) && (hasNext == '{' || hasNext == '!' || words[i] !== '')) {
+      // 遇到变量的条件非常尖锐，只有当变量以 ${ $! 或者 $word 起头的时候才算做变量, 并且不能是 $123 形式
+      // 如遇变量，调用递归变量解析器，根据返回结果进行操作
       res = variableHandler(i);
 
       parseStack.push(res.vModel);
@@ -46,11 +49,11 @@ function parse(template) {
       i = res.lps;
 
     } else if (symbols[i] == '#'){
-      if (hasNext && symbols[i+1] == '#' && words[i] == '') {
+      if (hasNext == '#' && words[i] == '') {
         /* 单行注释的情况 */
         i = commentHandler(i+1);
 
-      } else if (hasNext && symbols[i+1] == '*' && words[i] == '') {
+      } else if (hasNext == '*' && words[i] == '') {
         /* 多行注释的情况 */
         i = multilineCommentHandler(i+1);
 
@@ -62,6 +65,12 @@ function parse(template) {
         i = res.lps;
 
       } else {
+        /* 不是指令的情况 */
+        if (words[i] == '' || keywords.indexOf(words[i]) == -1) {
+          parseStack.push({type: TYPE_HTML, val: symbols[i] + words[i]});
+          continue;
+        }
+
         /* 指令处理的情况 */
         res = directiveHandler(i);
 
@@ -71,10 +80,44 @@ function parse(template) {
 
       }
 
-    } else if (symbols[i] == '\\' && hasNext && words[i] == '') {
-      /* 遭遇转义字符的情况 */
-      parseStack.push({type: TYPE_HTML, val: symbols[i+1] + words[i+1]});
-      i++;
+    } else if (symbols[i] == '\\' && words[i] == '') {
+      // 当遇到一个转义符号 \ 的时候, 对接下来的符号进行遍历, 数数看到底有多少个 \
+      var n = i;
+      while (symbols[n] == '\\' && words[n] == '' && n < symbolCount - 1) {
+        n++;
+      }
+
+      var num = n - i;
+      var slashString = '';
+
+      // 生成转义符号链
+      for (var x = 0; x < num; x++) {
+        slashString += '\\';
+      }
+
+      // 这里针对指令和非指令采取不同策略
+      if (symbols[n] == '#' && (words[n] == '' || keywords.indexOf(words[n]) == -1)) {
+          parseStack.push({type: TYPE_HTML, val: slashString + symbols[n] + words[n]});
+          i = n;
+          continue;
+
+      } else if (symbols[n] == '#' || symbols[n] == '$') {
+
+        // 这里针对单数个和偶数个 \ 采取不同策略
+        if (num % 2 == 0) {
+          var tmpslashes = symbols[n] == '$' ? slashString.slice(0, num / 2) : slashString;
+          parseStack.push({type: TYPE_HTML, val: tmpslashes});
+          i = n - 1;
+        } else {
+          parseStack.push({type: TYPE_HTML, val: slashString.slice(0, num / 2) + symbols[n] + words[n]});
+          i = n;
+        }
+
+        continue;
+      }
+
+      // 仅仅是正常无作用的 \ 的情况
+      parseStack.push({type: TYPE_HTML, val: symbols[i]});
 
     } else if (symbols[i] == '\n') {
       /* 所有 HTML 内容里的 \n 应被无视 */
@@ -93,35 +136,36 @@ function parse(template) {
 
 /* 纯html文本解析器 */
 function pureHtmlHandler(pos){
-  var hModel = {type: 'html', val: words[pos]};
+  var hModel = {type: TYPE_HTML, val: words[pos]};
 
   for (var j = pos + 1; j < symbolCount; j++) {
-    if (symbols[j] == ']' && symbols.slice(j, j+3).join('') == ']]#' && words.slice(j, j+2).join('') == '') {
+    if (symbols[j] == '\\' && j < symbolCount - 1 && words[j] == '') {
+      // 转义符号处理
+      hModel.val += symbols[j + 1] + words[j + 1];
+      j++;
+
+    } else if (symbols[j] == ']' && symbols.slice(j, j+3).join('') == ']]#' && words.slice(j, j+2).join('') == '') {
+      // 区块结束
       hModel.val += words[j + 2];
       return {
         hModel,
         lps: j + 2
       };
 
-    } else if (symbols[j] == '\n'){
-      // 所有 HTML 内容里的 \n 应被无视
-      hModel.val += words[j];
-
     } else {
-      hModel.val += symbols[j] + words[j];
+      // 无视所有换行符
+      hModel.val += (symbols[j] == '\n' ? '' : symbols[j]) + words[j];
     }
   }
 
-  throwError('防止转义没有结束标识', 'EOF');
+  throwError('防止转义没有结束标识', pos);
 }
 
 
 /* 注释解析器 */
 function commentHandler(pos){
   for (var j = pos + 1; j < symbolCount; j++) {
-    if (symbols[j] == '\n') {
-      return j; // 返回主循环位置
-    }
+    if (symbols[j] == '\n') return j; // 返回主循环位置
   }
   return j;
 }
@@ -135,7 +179,7 @@ function multilineCommentHandler(pos){
     }
   }
 
-  throwError('多行注释没有结束标识', 'EOF');
+  throwError('多行注释没有结束标识', pos);
 }
 
 
@@ -200,24 +244,25 @@ function directiveHandler(pos){
         if (keywordsNeedSublayer.indexOf(words[pos]) >= 0){
           if (symbols[j] == ' '){
             continue;
+
           } else {
             throwError(`指令 ${dModel.val} 缺少 (`, j);
           }
+
         }
 
-        if (keywords.indexOf(dModel.val) == -1){
-          throwError(`指令 ${dModel.val} 不存在`, j);
-        }
-
+        // 因为没有表达式, 所以没有子层
         dModel.sublayer = false;
+
         return {
           dModel,
           lps: j - 1, // 返回主循环位置
           ins: false // 不插入该符号后面的单词
         };
+
       } else {
         if (symbols[j] == '#') {
-          throwError(`指令 ${dModel.val} 未结束并遭遇另一个指令符号 #`, dModel.begin);
+          throwError(`指令 ${dModel.val} 未结束并遭遇另一个指令符号 #`, pos);
         }
 
         dModel.sublayer.push({type: TYPE_SYNTAX, val: symbols[j] + words[j]});
@@ -227,14 +272,17 @@ function directiveHandler(pos){
 
   /* 到了结尾的情况 */
   if (!sublayerBegin) {
+
+    // 因为没有表达式, 所以没有子层
     dModel.sublayer = false;
+
     return {
-      dModel: dModel,
+      dModel,
       lps: j - 1 // 返回主循环位置
     };
 
   } else {
-    throwError(`指令 ${dModel.val} 没有结束`, dModel.begin);
+    throwError(`指令 ${dModel.val} 没有结束`, pos);
   }
 }
 
@@ -253,7 +301,7 @@ function stringHandler(pos) {
 
     } else if (symbols[j] == expect) {
       return {
-        sModel: sModel,
+        sModel,
         lps: j // 返回主循环位置
       };
 
@@ -266,14 +314,14 @@ function stringHandler(pos) {
 
     } else if (symbols[j] == '\n') {
       /* 遭遇换行符需报错 */
-      throwError(`字符串 '${sModel.sublayer[0].val}' 没有结束`, sModel.begin);
+      throwError(`字符串 '${sModel.sublayer[0].val}' 没有结束`, pos);
 
     } else {
       sModel.sublayer.push({type: TYPE_STRING_CONTENT, val: symbols[j] + words[j]});
     }
   }
 
-  throwError(`字符串 '${sModel.sublayer[0].val}' 没有结束`, sModel.begin);
+  throwError(`字符串 '${sModel.sublayer[0].val}' 没有结束`, pos);
 }
 
 
@@ -294,21 +342,17 @@ function variableHandler(pos) {
 
   for (var j = pos + 1; j < symbolCount; j++) {
 
-    if (symbols[j] == '$') {
+    if (complexVariableBeginToken && symbols[j] == '$') {
       /* 再次遭遇变量的情况 */
       res = variableHandler(j);
 
       vModel.sublayer.push(res.vModel);
       j = res.lps;
 
-    } else if (symbols[j] == '!'){
+    } else if (symbols[j] == '!' && symbols[j - 1] == '$' && words[j - 1] == ''){
       /* Quiet Reference 的情况 */
-      if (!complexVariableBeginToken){
-        vModel.type = TYPE_VARIABLE_QR;
-        vModel.sublayer.push({type: TYPE_SYNTAX, val: words[j]});
-      } else {
-        vModel.sublayer.push({type: TYPE_SYNTAX, val: symbols[j] + words[j]});
-      }
+      vModel.type = TYPE_VARIABLE_QR;
+      vModel.sublayer.push({type: TYPE_SYNTAX, val: words[j]});
 
     } else if (complexVariableBeginToken && (symbols[j] == '"' || symbols[j] == '\'')){
       /* 字符串的情况 */
@@ -344,7 +388,7 @@ function variableHandler(pos) {
           return {
             vModel,
             lps: j, // 返回主循环位置
-            ins: false // 不插入该符号后面的单词
+            ins: true // 插入该符号后面的单词
           };
 
         } else if (j < symbolCount - 1 && symbols[j + 1] == '.') {
@@ -395,7 +439,7 @@ function variableHandler(pos) {
       lps: j // 返回主循环位置
     };
   } else {
-    throwError(`变量 ${vModel.sublayer[0].val} 没有结束`, vModel.begin);
+    throwError(`变量 ${vModel.sublayer[0].val} 没有结束`, pos);
   }
 }
 

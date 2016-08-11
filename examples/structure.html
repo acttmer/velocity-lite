@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Velocity Test</title>
+    <script type="text/javascript" src="assets/velocity-lite.0.2.5.js"></script>
+</head>
+<body>
+    <div id="result"></div>
+    <style>
+      .c {
+        background: #000;
+        color: #fff;
+      }
+    </style>
+
+    <script id="tpl" type="text/template">
+        #foreach ($item in $list)
+            #if (${item.user} == 'A')
+                A == ${item.user}
+            #elseif (${item.user} == 'B' && ${item.user} != 'A')
+                B == ${item.user}
+            #end
+        #end
+    </script>
+    <script>
+        var v = new Velocity(document.querySelector('#tpl').innerHTML);
+        var html = v.render({
+            list: [
+                {
+                    user: "A",
+                    site: "www.iqiyi.com"
+                },
+                {
+                    user: "B",
+                    site: "www.iqiyi.com"
+                }
+            ]
+        });
+        document.getElementById("result").innerHTML = html;
+    </script>
+</body>
+</html>

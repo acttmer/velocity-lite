@@ -10,7 +10,9 @@ function Velocity(template){
 module.exports = Velocity;
 
 Velocity.prototype = {
-  render: render
+  render: render,
+  parse: getParse,
+  getVM: getVM
 }
 
 /* 默认插件 */
@@ -46,6 +48,11 @@ function render(data){
   return fn(data);
 }
 
+/* 生成预编译代码 */
+function getParse(template) {
+  return compile(parse(template), template);
+}
+
 /* 生成虚拟机 */
 function getVM(template){
   var key = cache.getKey(template);
@@ -58,7 +65,7 @@ function getVM(template){
       fn = new Function(sessionCache);
 
     } else {
-      var jsCode = compile(parse(template), template);
+      var jsCode = getParse(template);
 
       fn = new Function(jsCode);
 
